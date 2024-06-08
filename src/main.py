@@ -87,26 +87,22 @@ class Alice(YaoGarbler):
 
         print(f"======== {circuit['id']} ========")
 
-        # Generate all inputs for both Alice and Bob
-        for bits in [format(n, 'b').zfill(N) for n in range(2**N)]:
-            bits_a = [int(b) for b in bits[:len(a_wires)]]  # Alice's inputs
-
-            # Map Alice's wires to (key, encr_bit)
-            for i in range(len(a_wires)):
-                a_inputs[a_wires[i]] = (keys[a_wires[i]][bits_a[i]],
+        bits_a = [0, 1]
+    
+        # Map Alice's wires to (key, encr_bit)
+        for i in range(len(a_wires)):
+            a_inputs[a_wires[i]] = (keys[a_wires[i]][bits_a[i]],
                                         pbits[a_wires[i]] ^ bits_a[i])
 
-            # Send Alice's encrypted inputs and keys to Bob
-            result = self.ot.get_result(a_inputs, b_keys)
+        # Send Alice's encrypted inputs and keys to Bob
+        result = self.ot.get_result(a_inputs, b_keys)
 
-            # Format output
-            str_bits_a = ' '.join(bits[:len(a_wires)])
-            str_bits_b = ' '.join(bits[len(a_wires):])
-            str_result = ' '.join([str(result[w]) for w in outputs])
+        # Format output
+        str_bits_a = ' '.join(str(b) for b in bits_a)
+        str_result = ' '.join([str(result[w]) for w in outputs])
 
-            print(f"  Alice{a_wires} = {str_bits_a} "
-                  f"Bob{b_wires} = {str_bits_b}  "
-                  f"Outputs{outputs} = {str_result}")
+        print(f"  Alice{a_wires} = {str_bits_a} "
+              f"Outputs{outputs} = {str_result}")
 
         print()
 
@@ -147,25 +143,33 @@ class Bob:
         """
         circuit, pbits_out = entry["circuit"], entry["pbits_out"]
         garbled_tables = entry["garbled_tables"]
+        outputs = circuit["out"]
         a_wires = circuit.get("alice", [])  # list of Alice's wires
         b_wires = circuit.get("bob", [])  # list of Bob's wires
         N = len(a_wires) + len(b_wires)
 
         print(f"Received {circuit['id']}")
+    
+        bits_b = [0, 1]  # Bob's inputs
 
-        # Generate all possible inputs for both Alice and Bob
-        for bits in [format(n, 'b').zfill(N) for n in range(2**N)]:
-            bits_b = [int(b) for b in bits[N - len(b_wires):]]  # Bob's inputs
-
-            # Create dict mapping each wire of Bob to Bob's input
-            b_inputs_clear = {
-                b_wires[i]: bits_b[i]
-                for i in range(len(b_wires))
-            }
-
-            # Evaluate and send result to Alice
-            self.ot.send_result(circuit, garbled_tables, pbits_out,
+        # Create dict mapping each wire of Bob to Bob's input
+        b_inputs_clear = {    
+            b_wires[i]: bits_b[i]
+            for i in range(len(b_wires))
+        }
+    
+        # Evaluate and send result to Alice
+        result = self.ot.send_result(circuit, garbled_tables, pbits_out,
                                 b_inputs_clear)
+        
+        # Format output
+        str_input_b = ' '.join(str(b) for b in bits_b)
+        str_result = ' '.join([str(result[w]) for w in outputs])
+
+        print(f"  Bob{b_wires} = {str_input_b} "
+              f"Outputs{outputs} = {str_result}")
+
+        print()
 
 
 class LocalTest(YaoGarbler):

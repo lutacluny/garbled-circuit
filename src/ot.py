@@ -66,8 +66,9 @@ class ObliviousTransfer:
         result = yao.evaluate(circuit, g_tables, pbits_out, a_inputs,
                               b_inputs_encr)
 
-        logging.debug("Sending circuit evaluation")
         self.socket.send(result)
+
+        return result
 
     def ot_garbler(self, msgs):
         """Oblivious transfer, Alice's side.
