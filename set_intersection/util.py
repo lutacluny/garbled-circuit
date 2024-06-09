@@ -41,13 +41,13 @@ def binary_to_float(b: str) -> float:
     return unpacked
 
 
-def resv_length_of_bobs_set():
+def resv_length_of_bobs_set() -> int:
     with open(INPUT_BOB, "r") as file:
         content = file.read()
         return len(content.split(","))
 
 
-def resv_length_of_alice_set():
+def resv_length_of_alice_set() -> int:
     with open(INPUT_ALICE, "r") as file:
         content = file.read()
         return len(content.split(","))

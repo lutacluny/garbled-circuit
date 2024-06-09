@@ -10,7 +10,7 @@ def eq_with_alice(i: str) -> bool:
     )
 
     out = proc.stdout.readline().decode().strip()
-    #print(out)
+    # print(out)
     proc.terminate()
 
     if out[-1] == "1":
