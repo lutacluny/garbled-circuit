@@ -4,13 +4,14 @@ import ot
 import util
 import yao
 from abc import ABC, abstractmethod
+import sys
 
-logging.basicConfig(format="[%(levelname)s] %(message)s",
-                    level=logging.WARNING)
+logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.WARNING)
 
 
 class YaoGarbler(ABC):
     """An abstract class for Yao garblers (e.g. Alice)."""
+
     def __init__(self, circuits):
         circuits = util.parse_json(circuits)
         self.name = circuits["name"]
@@ -25,8 +26,7 @@ class YaoGarbler(ABC):
                 "garbled_tables": garbled_circuit.get_garbled_tables(),
                 "keys": garbled_circuit.get_keys(),
                 "pbits": pbits,
-                "pbits_out": {w: pbits[w]
-                              for w in circuit["out"]},
+                "pbits_out": {w: pbits[w] for w in circuit["out"]},
             }
             self.circuits.append(entry)
 
@@ -51,10 +51,12 @@ class Alice(YaoGarbler):
         oblivious_transfer: Optional; enable the Oblivious Transfer protocol
             (True by default).
     """
-    def __init__(self, circuits, oblivious_transfer=True):
+
+    def __init__(self, circuits, oblivious_transfer=True, input=[True, True]):
         super().__init__(circuits)
         self.socket = util.GarblerSocket()
         self.ot = ot.ObliviousTransfer(self.socket, enabled=oblivious_transfer)
+        self.input = input
 
     def start(self):
         """Start Yao protocol."""
@@ -81,30 +83,29 @@ class Alice(YaoGarbler):
         b_wires = circuit.get("bob", [])  # Bob's wires
         b_keys = {  # map from Bob's wires to a pair (key, encr_bit)
             w: self._get_encr_bits(pbits[w], key0, key1)
-            for w, (key0, key1) in keys.items() if w in b_wires
+            for w, (key0, key1) in keys.items()
+            if w in b_wires
         }
-        N = len(a_wires) + len(b_wires)
+        bits_a = [int(b) for b in self.input]
 
-        print(f"======== {circuit['id']} ========")
-
-        bits_a = [0, 1]
-    
         # Map Alice's wires to (key, encr_bit)
         for i in range(len(a_wires)):
-            a_inputs[a_wires[i]] = (keys[a_wires[i]][bits_a[i]],
-                                        pbits[a_wires[i]] ^ bits_a[i])
+            a_inputs[a_wires[i]] = (
+                keys[a_wires[i]][bits_a[i]],
+                pbits[a_wires[i]] ^ bits_a[i],
+            )
 
         # Send Alice's encrypted inputs and keys to Bob
         result = self.ot.get_result(a_inputs, b_keys)
 
         # Format output
-        str_bits_a = ' '.join(str(b) for b in bits_a)
-        str_result = ' '.join([str(result[w]) for w in outputs])
+        str_bits_a = " ".join(str(b) for b in bits_a)
+        str_result = " ".join([str(result[w]) for w in outputs])
 
-        print(f"  Alice{a_wires} = {str_bits_a} "
-              f"Outputs{outputs} = {str_result}")
-
-        print()
+        sys.stdout.write(
+            f"Alice{a_wires} = {str_bits_a}, Outputs{outputs} = {str_result}\n"
+        )
+        sys.stdout.flush()
 
     def _get_encr_bits(self, pbit, key0, key1):
         return ((key0, 0 ^ pbit), (key1, 1 ^ pbit))
@@ -120,9 +121,11 @@ class Bob:
         oblivious_transfer: Optional; enable the Oblivious Transfer protocol
             (True by default).
     """
-    def __init__(self, oblivious_transfer=True):
+
+    def __init__(self, oblivious_transfer=True, input=[True, True]):
         self.socket = util.EvaluatorSocket()
         self.ot = ot.ObliviousTransfer(self.socket, enabled=oblivious_transfer)
+        self.input = input
 
     def listen(self):
         """Start listening for Alice messages."""
@@ -144,32 +147,24 @@ class Bob:
         circuit, pbits_out = entry["circuit"], entry["pbits_out"]
         garbled_tables = entry["garbled_tables"]
         outputs = circuit["out"]
-        a_wires = circuit.get("alice", [])  # list of Alice's wires
         b_wires = circuit.get("bob", [])  # list of Bob's wires
-        N = len(a_wires) + len(b_wires)
 
-        print(f"Received {circuit['id']}")
-    
-        bits_b = [0, 1]  # Bob's inputs
+        bits_b = [int(b) for b in self.input]  # Bob's inputs
 
         # Create dict mapping each wire of Bob to Bob's input
-        b_inputs_clear = {    
-            b_wires[i]: bits_b[i]
-            for i in range(len(b_wires))
-        }
-    
+        b_inputs_clear = {b_wires[i]: bits_b[i] for i in range(len(b_wires))}
+
         # Evaluate and send result to Alice
-        result = self.ot.send_result(circuit, garbled_tables, pbits_out,
-                                b_inputs_clear)
-        
+        result = self.ot.send_result(circuit, garbled_tables, pbits_out, b_inputs_clear)
+
         # Format output
-        str_input_b = ' '.join(str(b) for b in bits_b)
-        str_result = ' '.join([str(result[w]) for w in outputs])
+        str_input_b = " ".join(str(b) for b in bits_b)
+        str_result = " ".join([str(result[w]) for w in outputs])
 
-        print(f"  Bob{b_wires} = {str_input_b} "
-              f"Outputs{outputs} = {str_result}")
-
-        print()
+        sys.stdout.write(
+            f"Bob{b_wires} = {str_input_b}, Outputs{outputs} = {str_result}\n"
+        )
+        sys.stdout.flush()
 
 
 class LocalTest(YaoGarbler):
@@ -182,6 +177,7 @@ class LocalTest(YaoGarbler):
         print_mode: Print a clear version of the garbled tables or
             the circuit evaluation (the default).
     """
+
     def __init__(self, circuits, print_mode="circuit"):
         super().__init__(circuits)
         self._print_mode = print_mode
@@ -215,31 +211,38 @@ class LocalTest(YaoGarbler):
         print(f"======== {circuit['id']} ========")
 
         # Generate all possible inputs for both Alice and Bob
-        for bits in [format(n, 'b').zfill(N) for n in range(2**N)]:
-            bits_a = [int(b) for b in bits[:len(a_wires)]]  # Alice's inputs
-            bits_b = [int(b) for b in bits[N - len(b_wires):]]  # Bob's inputs
+        for bits in [format(n, "b").zfill(N) for n in range(2**N)]:
+            bits_a = [int(b) for b in bits[: len(a_wires)]]  # Alice's inputs
+            bits_b = [int(b) for b in bits[N - len(b_wires) :]]  # Bob's inputs
 
             # Map Alice's wires to (key, encr_bit)
             for i in range(len(a_wires)):
-                a_inputs[a_wires[i]] = (keys[a_wires[i]][bits_a[i]],
-                                        pbits[a_wires[i]] ^ bits_a[i])
+                a_inputs[a_wires[i]] = (
+                    keys[a_wires[i]][bits_a[i]],
+                    pbits[a_wires[i]] ^ bits_a[i],
+                )
 
             # Map Bob's wires to (key, encr_bit)
             for i in range(len(b_wires)):
-                b_inputs[b_wires[i]] = (keys[b_wires[i]][bits_b[i]],
-                                        pbits[b_wires[i]] ^ bits_b[i])
+                b_inputs[b_wires[i]] = (
+                    keys[b_wires[i]][bits_b[i]],
+                    pbits[b_wires[i]] ^ bits_b[i],
+                )
 
-            result = yao.evaluate(circuit, garbled_tables, pbits_out, a_inputs,
-                                  b_inputs)
+            result = yao.evaluate(
+                circuit, garbled_tables, pbits_out, a_inputs, b_inputs
+            )
 
             # Format output
-            str_bits_a = ' '.join(bits[:len(a_wires)])
-            str_bits_b = ' '.join(bits[len(a_wires):])
-            str_result = ' '.join([str(result[w]) for w in outputs])
+            str_bits_a = " ".join(bits[: len(a_wires)])
+            str_bits_b = " ".join(bits[len(a_wires) :])
+            str_result = " ".join([str(result[w]) for w in outputs])
 
-            print(f"  Alice{a_wires} = {str_bits_a} "
-                  f"Bob{b_wires} = {str_bits_b}  "
-                  f"Outputs{outputs} = {str_result}")
+            print(
+                f"  Alice{a_wires} = {str_bits_a} "
+                f"Bob{b_wires} = {str_bits_b}  "
+                f"Outputs{outputs} = {str_result}"
+            )
 
         print()
 
@@ -250,8 +253,10 @@ class LocalTest(YaoGarbler):
     @print_mode.setter
     def print_mode(self, print_mode):
         if print_mode not in self.modes:
-            logging.error(f"Unknown print mode '{print_mode}', "
-                          f"must be in {list(self.modes.keys())}")
+            logging.error(
+                f"Unknown print mode '{print_mode}', "
+                f"must be in {list(self.modes.keys())}"
+            )
             return
         self._print_mode = print_mode
 
@@ -262,14 +267,15 @@ def main(
     oblivious_transfer=True,
     print_mode="circuit",
     loglevel=logging.WARNING,
+    input=[True, True],
 ):
     logging.getLogger().setLevel(loglevel)
 
     if party == "alice":
-        alice = Alice(circuit_path, oblivious_transfer=oblivious_transfer)
+        alice = Alice(circuit_path, oblivious_transfer=oblivious_transfer, input=input)
         alice.start()
     elif party == "bob":
-        bob = Bob(oblivious_transfer=oblivious_transfer)
+        bob = Bob(oblivious_transfer=oblivious_transfer, input=input)
         bob.listen()
     elif party == "local":
         local = LocalTest(circuit_path, print_mode=print_mode)
@@ -278,8 +284,12 @@ def main(
         logging.error(f"Unknown party '{party}'")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
+
+    def parse_input(string):
+        bools = [b == "1" for b in string]
+        return bools
 
     def init():
         loglevels = {
@@ -287,13 +297,13 @@ if __name__ == '__main__':
             "info": logging.INFO,
             "warning": logging.WARNING,
             "error": logging.ERROR,
-            "critical": logging.CRITICAL
+            "critical": logging.CRITICAL,
         }
 
         parser = argparse.ArgumentParser(description="Run Yao protocol.")
-        parser.add_argument("party",
-                            choices=["alice", "bob", "local"],
-                            help="the yao party to run")
+        parser.add_argument(
+            "party", choices=["alice", "bob", "local"], help="the yao party to run"
+        )
         parser.add_argument(
             "-c",
             "--circuit",
@@ -301,28 +311,42 @@ if __name__ == '__main__':
             default="circuits/default.json",
             help=("the JSON circuit file for alice and local tests"),
         )
-        parser.add_argument("--no-oblivious-transfer",
-                            action="store_true",
-                            help="disable oblivious transfer")
+        parser.add_argument(
+            "--no-oblivious-transfer",
+            action="store_true",
+            help="disable oblivious transfer",
+        )
         parser.add_argument(
             "-m",
             metavar="mode",
             choices=["circuit", "table"],
             default="circuit",
-            help="the print mode for local tests (default 'circuit')")
-        parser.add_argument("-l",
-                            "--loglevel",
-                            metavar="level",
-                            choices=loglevels.keys(),
-                            default="warning",
-                            help="the log level (default 'warning')")
+            help="the print mode for local tests (default 'circuit')",
+        )
+        parser.add_argument(
+            "-l",
+            "--loglevel",
+            metavar="level",
+            choices=loglevels.keys(),
+            default="warning",
+            help="the log level (default 'warning')",
+        )
+        parser.add_argument(
+            "-i",
+            "--input",
+            type=parse_input,
+            help="input for the wires, e.g. 01 in case of 2 input wires",
+        )
+
+        args = parser.parse_args()
 
         main(
-            party=parser.parse_args().party,
-            circuit_path=parser.parse_args().circuit,
-            oblivious_transfer=not parser.parse_args().no_oblivious_transfer,
-            print_mode=parser.parse_args().m,
-            loglevel=loglevels[parser.parse_args().loglevel],
+            party=args.party,
+            circuit_path=args.circuit,
+            oblivious_transfer=not args.no_oblivious_transfer,
+            print_mode=args.m,
+            loglevel=loglevels[args.loglevel],
+            input=args.input,
         )
 
     init()

@@ -1,0 +1,10 @@
+name: garbled-circuit
+channels:
+  - conda-forge
+  - default
+  - defaults
+dependencies:
+  - python==3.11.9=h955ad1f_0
+  - pyzmq==25.1.2=py311h6a678d5_0 
+  - cryptography==42.0.5=py311hdda0065_1
+  - sympy==1.12=py311h06a4308_0
