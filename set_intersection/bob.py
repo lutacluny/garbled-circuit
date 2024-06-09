@@ -4,7 +4,7 @@ from util import read_to_set, convert_to_float, resv_length_of_alice_set, INPUT_
 
 def eq_with_alice(i: str) -> bool:
     proc = subprocess.Popen(
-        ["python", "garbled_circuit/main.py", "bob", "-i", i],
+        ["python", "../garbled_circuit/main.py", "bob", "-i", i],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )

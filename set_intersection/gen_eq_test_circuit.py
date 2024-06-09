@@ -3,7 +3,6 @@ from math import log2
 import json
 from util import BIT_LENGTH
 
-BIT_LENGTH = 4
 def gen_gates(a_wires, b_wires):
     gates = []
     gate_ids = []
@@ -58,7 +57,7 @@ def main():
         ],
     }
 
-    with open(f'garbled_circuit/circuits/{name}.json', 'w') as json_file:
+    with open(f'../garbled_circuit/circuits/{name}.json', 'w') as json_file:
         json.dump(circuit, json_file, indent=2)
 
 

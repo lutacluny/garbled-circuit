@@ -12,10 +12,10 @@ def eq_with_bob(i: str) -> bool:
     proc = subprocess.Popen(
         [
             "python",
-            "garbled_circuit/main.py",
+            "../garbled_circuit/main.py",
             "alice",
             "-c",
-            f"garbled_circuit/circuits/eq_{BIT_LENGTH}.json",
+            f"../garbled_circuit/circuits/eq_{BIT_LENGTH}.json",
             "-i",
             i,
         ],
