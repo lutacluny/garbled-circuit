@@ -1,11 +1,12 @@
 import subprocess
 from util import (
-    read_to_set,
+    read_to_binary_representation,
     convert_to_float,
     resv_length_of_bobs_set,
     BIT_LENGTH,
     INPUT_ALICE,
 )
+from verifier import ground_truth
 
 
 def eq_with_bob(i: str) -> bool:
@@ -29,16 +30,14 @@ def eq_with_bob(i: str) -> bool:
         print(err)
 
     out = out.decode().strip()
-    #print(out)
 
     if out[-1] == "1":
         return True
     else:
         return False
 
-
-def main():
-    set_a = read_to_set(INPUT_ALICE)
+def common_elements_with_bob() -> set[float]:
+    set_a = read_to_binary_representation(INPUT_ALICE)
     length_set_bob = resv_length_of_bobs_set()
 
     common_elements = set()
@@ -46,8 +45,15 @@ def main():
         for _ in range(0, length_set_bob):
             if eq_with_bob(i):
                 common_elements.add(i)
+                break
 
-    print(convert_to_float(common_elements))
+    return convert_to_float(common_elements)
+
+def main():
+    common_elements = common_elements_with_bob()
+    
+    print(common_elements)
+    print(common_elements == ground_truth())
 
 
 if __name__ == "__main__":

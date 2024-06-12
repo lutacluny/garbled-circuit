@@ -1,19 +1,23 @@
 import struct
+import random
 
 BIT_LENGTH = 32
 INPUT_BOB = "input_bob.txt"
 INPUT_ALICE = "input_alice.txt"
 
 
-def read_to_set(file_path: str) -> set[str]:
+def read_to_binary_representation(file_path: str) -> set[str]:
+    s = read_to_set(file_path)
+
+    return set(map(float_to_binary, s))
+
+def read_to_set(file_path: str) -> set[float]:
     with open(file_path, "r") as file:
         content = file.read()
-        floats_set = set(map(float, content.split(",")))
-        return convert_to_binary(floats_set)
+        floats = list(map(float, content.split(",")))
+        random.shuffle(floats)
 
-
-def convert_to_binary(floats_set: set[float]) -> set[str]:
-    return set(map(float_to_binary, floats_set))
+        return set(floats)
 
 
 def float_to_binary(f: float) -> str:
@@ -51,3 +55,4 @@ def resv_length_of_alice_set() -> int:
     with open(INPUT_ALICE, "r") as file:
         content = file.read()
         return len(content.split(","))
+

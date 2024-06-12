@@ -1,5 +1,12 @@
 import subprocess
-from util import read_to_set, convert_to_float, resv_length_of_alice_set, INPUT_BOB
+from util import (
+    read_to_binary_representation,
+    convert_to_float,
+    resv_length_of_alice_set,
+    INPUT_BOB,
+)
+from verifier import ground_truth
+
 
 
 def eq_with_alice(i: str) -> bool:
@@ -10,7 +17,6 @@ def eq_with_alice(i: str) -> bool:
     )
 
     out = proc.stdout.readline().decode().strip()
-    # print(out)
     proc.terminate()
 
     if out[-1] == "1":
@@ -19,8 +25,8 @@ def eq_with_alice(i: str) -> bool:
         return False
 
 
-def main():
-    set_b = read_to_set(INPUT_BOB)
+def common_elements_with_alice() -> set[float]:
+    set_b = read_to_binary_representation(INPUT_BOB)
     length_set_alice = resv_length_of_alice_set()
 
     common_elements = set()
@@ -28,8 +34,16 @@ def main():
         for i in set_b:
             if eq_with_alice(i):
                 common_elements.add(i)
+                break
 
-    print(convert_to_float(common_elements))
+    return convert_to_float(common_elements)
+
+
+def main():
+    common_elements = common_elements_with_alice()
+
+    print(common_elements)
+    print(common_elements == ground_truth())
 
 
 if __name__ == "__main__":
