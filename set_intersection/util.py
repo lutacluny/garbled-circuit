@@ -6,10 +6,15 @@ INPUT_BOB = "input_bob.txt"
 INPUT_ALICE = "input_alice.txt"
 
 
-def read_to_binary_representation(file_path: str) -> set[str]:
-    s = read_to_set(file_path)
+def read_to_binary_representation(file_path: str) -> dict[str:float]:
+    floats = read_to_set(file_path)
+    repr = {}
 
-    return set(map(float_to_binary, s))
+    for f in floats:
+        repr[float_to_binary(f)] = f
+
+    return repr
+
 
 def read_to_set(file_path: str) -> set[float]:
     with open(file_path, "r") as file:
@@ -30,19 +35,15 @@ def float_to_binary(f: float) -> str:
     return f"{unpacked:032b}"
 
 
-def convert_to_float(bin_set: set[str]) -> set[float]:
-    return set(map(binary_to_float, bin_set))
+def get_floats(
+    bit_strings: set[str], bin_representations: dict[str:float]
+) -> set[float]:
+    floats = set()
 
+    for bit_string in bit_strings:
+        floats.add(bin_representations[bit_string])
 
-def binary_to_float(b: str) -> float:
-    if len(b) != BIT_LENGTH:
-        raise Exception(f"Binary string length has to be {BIT_LENGTH}.")
-
-    integer_representation = int(b, 2)
-    packed = struct.pack("!I", integer_representation)
-    unpacked = struct.unpack("!f", packed)[0]
-
-    return unpacked
+    return floats
 
 
 def resv_length_of_bobs_set() -> int:
@@ -55,4 +56,3 @@ def resv_length_of_alice_set() -> int:
     with open(INPUT_ALICE, "r") as file:
         content = file.read()
         return len(content.split(","))
-

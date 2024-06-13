@@ -1,12 +1,11 @@
 import subprocess
 from util import (
     read_to_binary_representation,
-    convert_to_float,
     resv_length_of_alice_set,
+    get_floats,
     INPUT_BOB,
 )
 from verifier import ground_truth
-
 
 
 def eq_with_alice(i: str) -> bool:
@@ -26,24 +25,24 @@ def eq_with_alice(i: str) -> bool:
 
 
 def common_elements_with_alice() -> set[float]:
-    set_b = read_to_binary_representation(INPUT_BOB)
+    bin_repr_maps_to_float = read_to_binary_representation(INPUT_BOB)
     length_set_alice = resv_length_of_alice_set()
 
     common_elements = set()
     for _ in range(0, length_set_alice):
-        for i in set_b:
+        for i in bin_repr_maps_to_float:
             if eq_with_alice(i):
                 common_elements.add(i)
                 break
 
-    return convert_to_float(common_elements)
+    return get_floats(common_elements, bin_repr_maps_to_float)
 
 
 def main():
     common_elements = common_elements_with_alice()
 
-    print(common_elements)
-    print(common_elements == ground_truth())
+    print(f"Common elements with alice: {common_elements}")
+    print(f"Calculation was successful: {common_elements == ground_truth()}")
 
 
 if __name__ == "__main__":
