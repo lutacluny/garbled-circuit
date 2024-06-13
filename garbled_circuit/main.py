@@ -6,9 +6,6 @@ import yao
 from abc import ABC, abstractmethod
 import sys
 
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.WARNING)
-
-
 class YaoGarbler(ABC):
     """An abstract class for Yao garblers (e.g. Alice)."""
 
@@ -269,6 +266,9 @@ def main(
     loglevel=logging.WARNING,
     input=[True, True],
 ):
+    
+    log_path = f"./../set_intersection/logs/{party}.log"
+    logging.basicConfig(filename=log_path, format="[%(levelname)s] %(message)s")
     logging.getLogger().setLevel(loglevel)
 
     if party == "alice":

@@ -10,7 +10,7 @@ from verifier import ground_truth
 
 def eq_with_alice(i: str) -> bool:
     proc = subprocess.Popen(
-        ["python", "../garbled_circuit/main.py", "bob", "-i", i],
+        ["python", "../garbled_circuit/main.py", "bob", "-i", i, "-l", "debug"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )

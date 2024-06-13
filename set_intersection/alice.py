@@ -19,6 +19,8 @@ def eq_with_bob(i: str) -> bool:
             f"../garbled_circuit/circuits/eq_{BIT_LENGTH}.json",
             "-i",
             i,
+            "-l",
+            "debug",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
