@@ -4,3 +4,6 @@ __pycache__/
 .vscode/
 *.txt
 **/logs/*
+*.log
+*.synctex.gz
+*.aux

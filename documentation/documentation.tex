@@ -1,0 +1,92 @@
+\documentclass[a4paper,12pt]{scrartcl}
+\usepackage[utf8]{inputenc}
+\usepackage{mathtools}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+%opening
+\title{Using Yao's Protocol to Calculate Common Elements of two Sets}
+\author{Friedrich Hartmann}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents 
+
+\section{Overview}
+
+In order to calculate the common elements for two parties, Alice and Bob, I used garbled circuits such that neither Alice nor Bob reveal elements they don't share.
+Each set is read from a text-file containing comma separated numbers that are interpreted as 32-bit floats. \\
+The implementation is a wrapper around a \href{https://github.com/ojroques/garbled-circuit}{Secure Multi-Party Computation library} which can be found on GitHub.  
+
+
+\subsection{Protocol Description}
+
+The protocol works as follows. 
+
+
+\begin{enumerate}
+ \item Alice and Bob both shuffle their inputs. 
+ 
+ \item Alice and Bob communicate their number of elements, $k$ and $l$, in each set. 
+ 
+ \item Yao's Protocol is executed $\mathcal{O}(k \cdot l)$ times to pairwise test the equality of two elements. I the latter case, both parties add that element to the set of shared elements.
+ 
+\end{enumerate}
+
+
+At first, I had to decide whether to create a boolean-circuit that calculates a set intersection in one go or to perform an iterative pairwise test to achieve the same. The first has the advantage that there is less communication between Alice and Bob for a price of a rather complicated circle. Furthermore, the exact positions, where the elements are equal, are not revealed. 
+
+However, I decided to take the second approach, as I wanted to automate the circuit generation process in order to theoretically support the encoding of arbitrary length integers or floating point numbers. Furthermore, I want to hide any information about the ordering of a set. That's why the inputs are permuted at first.   
+
+\subsection{Circuit Definition}
+
+At first, I implemented a circuit-generation function that outputs a circuit in json format which checks whether two $n$-bit sequences $a,b$ are equal. The circuit has $2n$ input wires. The bits $a$ are mapped to the wires $\{1,...,n\}$ while $b$ is mapped to the wires $\{n+1,...,2n\}$. There is only one output wire that is $1$ in case of $a=b$ and otherwise $0$. 
+
+The length $n$ is restricted to be a power of 2, because the circuit has a binary-tree like structure. Input wires are mapped to leaves in such a way that a pair of leaves $(a_i, b_i)$, with $ i \in \{1,..,n\}$, $a_i \in a$, $b_i \in b $, has a $NXOR$-gate as a parent. The bits $a_i$ and $b_i$ share the same position $i$ in $a$ and $b$, respectively. Such a gate outputs $1$, in case both bits are equal and otherwise $0$. All the other nodes are $AND$-gates that encapsulate the predicate that $a_i$ and $a_b$ have to be equal for all positions $i$ if $a=b$. 
+
+
+\subsection{Design}
+
+The general idea is to have two scripts \textit{alice.py} and \textit{bob.py} that call the original library as a sub-process from different shells. Those scripts manage to read the sets from file and to execute the protocol as described in the previous section. The result of each call is obtained by reading \textit{stdout}. 
+
+\subsection{Functionalities}
+
+
+\subsubsection{Input Parameter}
+
+I added a command line argument $-i$ to the original \href{https://github.com/ojroques/garbled-circuit}{garbled-circuit} code base which allows to specify the assignment of the circuit's input wires for Alice and Bob. Before that, all possible combinations of inputs were calculated and printed as a table. I adjusted it to only consider the case that is determined by the given inputs. 
+
+\subsubsection{Logger}
+
+As stated before, the process of forwarding the results from evaluating the garbled circuit is done via \textit{stout}. Hence, the terminal cannot be used to log any communication from Yao's protocol. That's why I write the log statements to files that can be found in \textit{set\_intersection/logs/}.
+
+\subsubsection{Utilities}
+
+The file \textit{util.py} contains helper functions that 
+\begin{enumerate}
+ \item read the respective sets from a file.
+ \item perform the conversion between floating point numbers and bit-strings of length $32$. 
+ \item abstract from a channel on which the set length is communicated. I did not implement that channel but give interfaces in order to receive the length.
+\end{enumerate}
+
+Along with that, I specify constants which define the supported bit length and the location of the files containing the sets.
+
+
+\section{How to Run}
+See \href{../README.md}{\textit{README.md}} in the project's root directory. 
+
+
+\section{Limitations}
+The protocol, as it is, cannot be used to perform the calculation on the network. That's because I did not implement a channel on which the length of each set is exchanged. But, to know the number of calls to Yao's protocol, this is necessary . Therefore, the execution works only locally.  
+
+Second, the gate is fixed to handle input of length $32$ which is interpreted as float for each party. Since I can generate arbitrary big gates for input of length $2^n$, the support for any type of number can be implemented easily. 
+
+\section{Optimizations}
+The runtime can be optimized by changing the behavior of Alice and Bob in the original code base. Bob runs as a server and Alice connects as a client. Both are executed with a fixed assignment to the wires. In consequence, both the server and the client are shut down after evaluating one equality between two elements and are run with new inputs again and again. So, letting the server and client be connected while updating the inputs results in a speed up.
+
+
+
+\end{document}
