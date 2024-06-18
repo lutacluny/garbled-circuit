@@ -6,7 +6,7 @@ Each set is read from a text-file that contains 32-bit floating point numbers wh
 
 ## Setting up the Environment
 
-To get the scripts running, simply create a conda environment via executing `conda env create -f condaEnv.yml` from the project's root directory.
+To get the scripts running, simply create a conda environment via executing `conda env create -f condaEnv.yaml` from the project's root directory.
 
 Afterwards, activate the environment with `conda activate garbled-circuit`.
 
